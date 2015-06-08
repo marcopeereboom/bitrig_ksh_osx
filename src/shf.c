@@ -100,7 +100,7 @@ shf_fdopen(int fd, int sflags, struct shf *shf)
 			shf->buf = (unsigned char *) alloc(bsize, ATEMP);
 			sflags |= SHF_ALLOCB;
 		} else
-			shf->buf = (unsigned char *) 0;
+			shf->buf = NULL;
 	} else {
 		shf = (struct shf *) alloc(sizeof(struct shf) + bsize, ATEMP);
 		shf->buf = (unsigned char *) &shf[1];
@@ -328,8 +328,7 @@ shf_emptybuf(struct shf *shf, int flags)
 		    !(shf->flags & SHF_ALLOCB))
 			return EOF;
 		/* allocate more space for buffer */
-		nbuf = (unsigned char *) aresize(shf->buf, shf->wbsize * 2,
-		    shf->areap);
+		nbuf = aresizearray(shf->buf, 2, shf->wbsize, shf->areap);
 		shf->rp = nbuf + (shf->rp - shf->buf);
 		shf->wp = nbuf + (shf->wp - shf->buf);
 		shf->rbsize += shf->wbsize;
@@ -470,7 +469,7 @@ shf_getse(char *buf, int bsize, struct shf *shf)
 		internal_errorf(1, "shf_getse: flags %x", shf->flags);
 
 	if (bsize <= 0)
-		return (char *) 0;
+		return NULL;
 
 	--bsize;	/* save room for null */
 	do {
@@ -698,7 +697,7 @@ shf_smprintf(const char *fmt, ...)
 	struct shf shf;
 	va_list args;
 
-	shf_sopen((char *) 0, 0, SHF_WR|SHF_DYNAMIC, &shf);
+	shf_sopen(NULL, 0, SHF_WR|SHF_DYNAMIC, &shf);
 	va_start(args, fmt);
 	shf_vfprintf(&shf, fmt, args);
 	va_end(args);

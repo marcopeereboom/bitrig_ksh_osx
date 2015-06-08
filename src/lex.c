@@ -728,9 +728,9 @@ Done:
 				ungetsc(c2);
 		}
 
-		iop->name = (char *) 0;
-		iop->delim = (char *) 0;
-		iop->heredoc = (char *) 0;
+		iop->name = NULL;
+		iop->delim = NULL;
+		iop->heredoc = NULL;
 		Xfree(ws, wp);	/* free word */
 		yylval.iop = iop;
 		return REDIR;
@@ -1135,7 +1135,7 @@ getsc_line(Source *s)
 #endif /* HISTORY */
 	}
 	if (interactive)
-		set_prompt(PS2, (Source *) 0);
+		set_prompt(PS2, NULL);
 }
 
 static char *
@@ -1624,7 +1624,7 @@ getsc_bn(void)
 static Lex_state *
 push_state_(State_info *si, Lex_state *old_end)
 {
-	Lex_state	*new = alloc(sizeof(Lex_state) * STATE_BSIZE, ATEMP);
+	Lex_state	*new = acalloc(STATE_BSIZE, sizeof(Lex_state), ATEMP);
 
 	new[0].ls_info.base = old_end;
 	si->base = &new[0];

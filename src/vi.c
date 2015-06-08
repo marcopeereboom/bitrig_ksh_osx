@@ -138,7 +138,6 @@ const unsigned char	classify[128] = {
 #define VREDO		7		/* . */
 #define VLIT		8		/* ^V */
 #define VSEARCH		9		/* /, ? */
-#define VVERSION	10		/* <ESC> ^V */
 
 static char		undocbuf[CMDLEN];
 
@@ -221,7 +220,7 @@ x_vi(char *buf, size_t len)
 				trapsig(c == edchars.intr ? SIGINT : SIGQUIT);
 				x_mode(false);
 				unwind(LSHELL);
-			} else if (c == edchars.eof && state != VVERSION) {
+			} else if (c == edchars.eof) {
 				if (es->linelen == 0) {
 					x_vi_zotc(edchars.eof);
 					c = -1;
@@ -322,14 +321,6 @@ vi_hook(int ch)
 						return -1;
 					refresh(0);
 				}
-				if (state == VVERSION) {
-					save_cbuf();
-					es->cursor = 0;
-					es->linelen = 0;
-					putbuf(ksh_version + 4,
-					    strlen(ksh_version + 4), 0);
-					refresh(0);
-				}
 			}
 		}
 		break;
@@ -342,12 +333,6 @@ vi_hook(int ch)
 			es->cbuf[es->cursor++] = ch;
 		refresh(1);
 		state = VNORMAL;
-		break;
-
-	case VVERSION:
-		restore_cbuf();
-		state = VNORMAL;
-		refresh(0);
 		break;
 
 	case VARG1:
@@ -571,8 +556,6 @@ nextstate(int ch)
 		return VXCH;
 	else if (ch == '.')
 		return VREDO;
-	else if (ch == Ctrl('v'))
-		return VVERSION;
 	else if (is_cmd(ch))
 		return VCMD;
 	else
@@ -1947,7 +1930,7 @@ expand_word(int command)
 
 	nwords = x_cf_glob(XCF_COMMAND_FILE|XCF_FULLPATH,
 	    es->cbuf, es->linelen, es->cursor,
-	    &start, &end, &words, (int *) 0);
+	    &start, &end, &words, NULL);
 	if (nwords == 0) {
 		vi_error();
 		return -1;
@@ -2033,12 +2016,12 @@ complete_word(int command, int count)
 		 */
 		if (is_command) {
 			match = words[count] +
-			    x_basename(words[count], (char *) 0);
+			    x_basename(words[count], NULL);
 			/* If more than one possible match, use full path */
 			for (i = 0; i < nwords; i++)
 				if (i != count &&
 				    strcmp(words[i] + x_basename(words[i],
-				    (char *) 0), match) == 0) {
+				    NULL), match) == 0) {
 					match = words[count];
 					break;
 				}

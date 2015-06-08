@@ -123,7 +123,7 @@ static int	x_match(char *, char *);
 static void	x_redraw(int);
 static void	x_push(int);
 static void	x_e_ungetc(int);
-static int	x_e_getc(int);
+static int	x_e_getc(void);
 static void	x_e_putc(int);
 static void	x_e_puts(const char *);
 static int	x_comment(int);
@@ -176,7 +176,6 @@ static int	x_set_mark(int);
 static int	x_stuff(int);
 static int	x_stuffreset(int);
 static int	x_transpose(int);
-static int	x_version(int);
 static int	x_xchg_point_mark(int);
 static int	x_yank(int);
 static int	x_comp_list(int);
@@ -235,7 +234,6 @@ static const struct x_ftab x_ftab[] = {
 	{ x_stuff,		"stuff",			0 },
 	{ x_stuffreset,		"stuff-reset",			0 },
 	{ x_transpose,		"transpose-chars",		0 },
-	{ x_version,		"version",			0 },
 	{ x_xchg_point_mark,	"exchange-point-and-mark",	0 },
 	{ x_yank,		"yank",				0 },
 	{ x_comp_list,		"complete-list",		0 },
@@ -282,7 +280,7 @@ x_emacs(char *buf, size_t len)
 	x_last_command = NULL;
 	while (1) {
 		x_flush();
-		if ((c = x_e_getc(1)) < 0)
+		if ((c = x_e_getc()) < 0)
 			return 0;
 
 		line[at++] = c;
@@ -690,7 +688,7 @@ x_search_char_forw(int c)
 	char *cp = xcp;
 
 	*xep = '\0';
-	c = x_e_getc(1);
+	c = x_e_getc();
 	while (x_arg--) {
 		if (c < 0 ||
 		    ((cp = (cp == xep) ? NULL : strchr(cp + 1, c)) == NULL &&
@@ -708,7 +706,7 @@ x_search_char_back(int c)
 {
 	char *cp = xcp, *p;
 
-	c = x_e_getc(1);
+	c = x_e_getc();
 	for (; x_arg--; cp = p)
 		for (p = cp; ; ) {
 			if (p-- == xbuf)
@@ -823,7 +821,7 @@ x_search_hist(int c)
 	x_redraw(1);
 	while (1) {
 		x_flush();
-		if ((c = x_e_getc(offset >= 0)) < 0)
+		if ((c = x_e_getc()) < 0)
 			return (KSTD);
 		f = kb_find_hist_func(c);
 		if (c == CTRL('[')) {
@@ -882,7 +880,8 @@ x_search(char *pat, int sameline)
 
 	for (hp = x_histp - (sameline ? 0 : 1) ; hp >= history; --hp) {
 		i = x_match(*hp, pat);
-		if (i >= 0 && (*x_histp == NULL || strcmp(*x_histp, *hp) != 0)) {
+		if (i >= 0 && (x_histp > histptr || *x_histp == NULL ||
+		    strcmp(*x_histp, *hp) != 0)) {
 			x_load_hist(hp);
 			x_goto(xbuf + i + strlen(pat) - (*pat == '^'));
 			return i;
@@ -1576,33 +1575,6 @@ x_xchg_point_mark(int c)
 }
 
 static int
-x_version(int c)
-{
-	char *o_xbuf = xbuf, *o_xend = xend;
-	char *o_xep = xep, *o_xcp = xcp;
-
-	xbuf = xcp = (char *) ksh_version + 4;
-	xend = xep = (char *) ksh_version + 4 + strlen(ksh_version + 4);
-	x_redraw(1);
-	x_flush();
-
-	c = x_e_getc(0);
-	xbuf = o_xbuf;
-	xend = o_xend;
-	xep = o_xep;
-	xcp = o_xcp;
-	x_redraw(1);
-
-	if (c < 0)
-		return KSTD;
-	/* This is what at&t ksh seems to do...  Very bizarre */
-	if (c != ' ')
-		x_e_ungetc(c);
-
-	return KSTD;
-}
-
-static int
 x_noop(int c)
 {
 	return KSTD;
@@ -1749,7 +1721,7 @@ x_e_ungetc(int c)
 }
 
 static int
-x_e_getc(int redr)
+x_e_getc(void)
 {
 	int c;
 
@@ -1765,10 +1737,8 @@ x_e_getc(int redr)
 	}
 
 	while (got_sigwinch || ((c = x_getc()) < 0 && errno == EINTR)) {
-		if (redr) {
-			x_redraw(1);
-			x_flush();
-		}
+		x_redraw(1);
+		x_flush();
 	}
 
 	return (c);
@@ -1831,7 +1801,7 @@ x_set_arg(int c)
 	int n = 0;
 	int first = 1;
 
-	for (; c >= 0 && isdigit(c); c = x_e_getc(0), first = 0)
+	for (; c >= 0 && isdigit(c); c = x_e_getc(), first = 0)
 		n = n * 10 + (c - '0');
 	if (c < 0 || first) {
 		x_e_putc('\a');
