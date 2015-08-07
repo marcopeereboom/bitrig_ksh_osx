@@ -32,3 +32,5 @@
 	    ((tsp)->tv_nsec cmp (usp)->tv_nsec) :			\
 	    ((tsp)->tv_sec cmp (usp)->tv_sec))
 #endif
+
+long long strtonum(const char *, long long, long long, const char **);
