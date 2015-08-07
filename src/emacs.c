@@ -1,4 +1,4 @@
-/*	$OpenBSD: emacs.c,v 1.49 2015/02/16 01:44:41 tedu Exp $	*/
+/*	$OpenBSD: emacs.c,v 1.50 2015/03/25 12:10:52 jca Exp $	*/
 
 /*
  *  Emacs-like command line editing and history
@@ -814,15 +814,19 @@ x_search_hist(int c)
 	int offset = -1;	/* offset of match in xbuf, else -1 */
 	char pat [256+1];	/* pattern buffer */
 	char *p = pat;
+	const char *oprompt;
 	int (*f)(int);
 
 	*p = '\0';
-	set_prompt(ISEARCH, NULL);
+	oprompt = prompt;
+	prompt = "I-search: ";
 	x_redraw(1);
 	while (1) {
 		x_flush();
-		if ((c = x_e_getc()) < 0)
+		if ((c = x_e_getc()) < 0) {
+			prompt = oprompt;
 			return (KSTD);
+		}
 		f = kb_find_hist_func(c);
 		if (c == CTRL('[')) {
 			/* might be part of an escape sequence */
@@ -866,9 +870,9 @@ x_search_hist(int c)
 			break;
 		}
 	}
-	set_prompt(PS1, NULL);
+	prompt = oprompt;
 	x_redraw(1);
-	return KSTD;
+	return (KSTD);
 }
 
 /* search backward from current line */
@@ -1420,7 +1424,7 @@ x_init_emacs(void)
 	kb_add(x_comp_list,		NULL, CTRL('['), '=', 0);
 	kb_add(x_del_back,		NULL, CTRL('?'), 0);
 	kb_add(x_del_back,		NULL, CTRL('H'), 0);
-	/* x_del_char not assigned by default */
+	kb_add(x_del_char,		NULL, CTRL('['), '[', '3', '~', 0); /* delete */
 	kb_add(x_del_bword,		NULL, CTRL('['), CTRL('?'), 0);
 	kb_add(x_del_bword,		NULL, CTRL('['), CTRL('H'), 0);
 	kb_add(x_del_bword,		NULL, CTRL('['), 'h', 0);
